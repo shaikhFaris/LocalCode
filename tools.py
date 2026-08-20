@@ -2,28 +2,13 @@ from langchain.tools import tool
 import shutil
 import subprocess
 import os
+from langchain.chat_models import init_chat_model
+from dotenv import load_dotenv
+from datetime import datetime
+load_dotenv()
 
-@tool
-def list_files(startpath:str, ignore_dirs:set[str]=None, prefix="", _lines=None, _is_root=True):
-    """
-    Recursively build a tree-style directory listing, similar to the Linux `tree` command.
+def list_files_recursive(startpath:str, ignore_dirs:set[str]=None, prefix="", _lines=None, _is_root=True):
 
-    Args:
-        startpath: Root directory path to start listing from.
-        ignore_dirs: Set of directory names to skip (e.g. {"node_modules", ".git"}).
-            Defaults to a standard set of common build/dependency/VCS folders if None.
-        prefix: Internal use only. Accumulated indentation/connector string used
-            during recursion — do not pass this manually.
-        _lines: Internal use only. Accumulator list of output lines built up
-            across recursive calls — do not pass this manually.
-        _is_root: Internal use only. Marks whether the current call is the
-            top-level invocation (controls the root header line and final
-            return) — do not pass this manually.
-
-    Returns:
-        A single string containing the full directory tree, formatted with
-        `├──`, `└──`, and `│` connectors, one entry per line.
-    """
     if ignore_dirs is None:
         ignore_dirs = {'node_modules', 'venv', '.venv', '__pycache__',
                         '.git', '.idea', '.vscode', 'dist', 'build', 'env'}
@@ -48,10 +33,26 @@ def list_files(startpath:str, ignore_dirs:set[str]=None, prefix="", _lines=None,
 
         if entry.is_dir():
             extension = "    " if is_last else "│   "
-            list_files(entry.path, ignore_dirs, prefix + extension, _lines, _is_root=False)
+            list_files_recursive(entry.path, ignore_dirs, prefix + extension, _lines, _is_root=False)
 
     if _is_root:
         return "\n".join(_lines)
+
+@tool
+def list_files(startpath:str, ignore_dirs:set[str]=None)->str:
+    """
+    Build a tree-style directory listing, similar to the Linux `tree` command.
+
+    Args:
+        startpath: Root directory path to list.
+        ignore_dirs: Set of directory names to skip (e.g. {"node_modules", ".git"}).
+            Defaults to a standard set of common build/dependency/VCS folders if None.
+
+    Returns:
+        A single string containing the full directory tree, formatted with
+        `├──`, `└──`, and `│` connectors, one entry per line.
+    """
+    return list_files_recursive(startpath,ignore_dirs)
 
 @tool
 def read_file(path_and_filename:str)->str:
@@ -186,3 +187,12 @@ def git_status()->str:
     )
     return result.stdout or "No changes made."
 
+model = init_chat_model(
+    "deepseek-v4-flash",
+    model_provider="deepseek"   
+)
+
+tools=[list_files,read_file,search_code,git_diff,git_status]
+tools_by_name = {tool.name: tool for tool in tools}
+
+model_with_tools=model.bind_tools(tools)
