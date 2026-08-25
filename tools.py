@@ -57,7 +57,7 @@ def list_files(startpath:str, ignore_dirs:set[str]=None)->str:
 @tool
 def read_file(path_and_filename:str)->str:
     """
-    Read and return the full contents of a text file.
+    Read and return the full contents of a text file. Do not read .env file.
 
     Args:
         path_and_filename: Full path (including filename) of the file to read.
@@ -120,8 +120,7 @@ def git_diff(path_and_filename: str) -> str:
     Get the git diff for a specific file, including untracked (new) files.
 
     Uses `git add --intent-to-add` internally so that new/untracked files are
-    included in the diff output, then reverts that staging so the operation
-    stays read-only (no lasting changes to git's index).
+    included in the diff output.
 
     Args:
         path_and_filename: Path to the file to diff.
@@ -187,12 +186,38 @@ def git_status()->str:
     )
     return result.stdout or "No changes made."
 
+@tool
+def create_file(path_and_filename: str, content: str):
+    """
+    Create a new file and write content to it.
+
+    Uses mode 'x' (exclusive creation), which raises a FileExistsError
+    if a file already exists at the given path — it will never
+    overwrite an existing file.
+
+    Args:
+        path_and_filename (str): Full path (including filename) where
+            the new file should be created.
+        content (str): Text content to write into the newly created file.
+
+    Raises:
+        FileExistsError: If a file already exists at path_and_filename.
+        FileNotFoundError: If the parent directory in the path doesn't exist.
+        PermissionError: If the process lacks permission to create the file there.
+
+    Returns:
+        None
+    """
+    print("creating a new file...")
+    with open(path_and_filename, "x") as f:
+        f.write(content)
+
 model = init_chat_model(
-    "deepseek-v4-flash",
+    "deepseek-v4-pro",
     model_provider="deepseek"   
 )
 
-tools=[list_files,read_file,search_code,git_diff,git_status]
+tools=[list_files,read_file,search_code,git_diff,git_status,create_file]
 tools_by_name = {tool.name: tool for tool in tools}
 
 model_with_tools=model.bind_tools(tools)
