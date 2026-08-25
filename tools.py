@@ -4,7 +4,7 @@ import subprocess
 import os
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from datetime import datetime
+from agent_tools.apply_patch import apply_patch
 load_dotenv()
 
 def list_files_recursive(startpath:str, ignore_dirs:set[str]=None, prefix="", _lines=None, _is_root=True):
@@ -92,7 +92,7 @@ def search_code(query: str, path: str = None) -> str:
     Raises:
         RuntimeError: If ripgrep (`rg`) is not installed / not found on PATH.
     """
-    print("searching across in ",path)
+    print("searching ",query," across in ",path)
     if not query or not path:
         return "Need search query and path to search in"
 
@@ -212,12 +212,36 @@ def create_file(path_and_filename: str, content: str):
     with open(path_and_filename, "x") as f:
         f.write(content)
 
+@tool
+def delete_file(path_and_filename: str)->str:
+    """
+    Delete a file at the given path, if it exists.
+
+    Checks whether a file exists at the specified path and, if so, removes
+    it from the filesystem.
+
+    Args:
+        path_and_filename (str): Full path (including filename) of the
+            file to delete.
+
+    Returns:
+        str: "deleted successfully" if the file was found and removed,
+            or "The file does not exist" if no file was found at the
+            given path.
+    """
+    print("deleting a file...")
+    if os.path.exists(path_and_filename):
+        os.remove(path_and_filename)
+        return "deleted successfully"
+    else:
+        return "The file does not exist"
+
 model = init_chat_model(
-    "deepseek-v4-pro",
+    "deepseek-v4-flash",
     model_provider="deepseek"   
 )
 
-tools=[list_files,read_file,search_code,git_diff,git_status,create_file]
+tools=[list_files,read_file,search_code,git_diff,git_status,create_file,apply_patch,delete_file]
 tools_by_name = {tool.name: tool for tool in tools}
 
 model_with_tools=model.bind_tools(tools)

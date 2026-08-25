@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-
 """
 A self-contained **pure-Python 3.9+** utility for applying human-readable
 “pseudo-diff” patch files to a collection of text files.
 """
 
 from __future__ import annotations
+from langchain.tools import tool
 
 import pathlib
 from dataclasses import dataclass, field
@@ -510,23 +509,47 @@ def remove_file(path: str) -> None:
     pathlib.Path(path).unlink(missing_ok=True)
 
 
-# --------------------------------------------------------------------------- #
-#  CLI entry-point
-# --------------------------------------------------------------------------- #
-def main() -> None:
-    import sys
+@tool
+def apply_patch(patch_text: str) -> str:
+    """
+    Apply a pseudo-diff patch to one or more files on disk.
 
-    patch_text = sys.stdin.read()
+    Parses the given patch text (must start with "*** Begin Patch" and end
+    with "*** End Patch") and applies each contained action — updating,
+    adding, or deleting files — directly to the local filesystem using the
+    default file I/O helpers (open_file, write_file, remove_file).
+
+    The patch format supports three action types per file, declared via
+    header lines:
+        *** Update File: <path>   - apply @@ context-anchored diff chunks
+        *** Add File: <path>      - create a new file from '+' prefixed lines
+        *** Delete File: <path>   - remove an existing file
+
+    An optional "*** Move to: <new_path>" line under an Update File section
+    renames the file after applying the update.
+
+    Args:
+        patch_text (str): The full patch content, including the
+            "*** Begin Patch" / "*** End Patch" sentinels.
+
+    Returns:
+        str: "Done!" if the patch was applied successfully, an error
+            message if patch_text was empty, or the DiffError message if
+            parsing/applying the patch failed (e.g. malformed patch syntax,
+            missing target file, or invalid context match).
+
+    Note:
+        This function writes directly to disk — there is no dry-run or
+        preview mode. Callers should ensure the patch has been reviewed
+        or generated against a known, trusted version of the target files
+        before invoking this.
+    """
+    print("applying Context-Based Code Patching....")
+    print(patch_text)
     if not patch_text:
-        print("Please pass patch text through stdin", file=sys.stderr)
-        return
+        return "Please provide valid patch text"
     try:
         result = process_patch(patch_text, open_file, write_file, remove_file)
     except DiffError as exc:
-        print(exc, file=sys.stderr)
-        return
-    print(result)
-
-
-if __name__ == "__main__":
-    main()
+        return str(exc)
+    return result
