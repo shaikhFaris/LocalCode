@@ -5,7 +5,7 @@ import operator
 from langchain.messages import SystemMessage,HumanMessage,ToolMessage
 from typing import Literal
 from langgraph.graph import StateGraph, START, END
-from tools import tools_by_name,model_with_tools
+from agent_tools.tools import tools_by_name,model_with_tools
 from prompts.coding_agent import CODING_AGENT_SYSTEM_PROMPT
 
 class MessagesState(TypedDict):
@@ -68,12 +68,3 @@ agent_builder.add_edge("tool_node", "llm_call")
 agent = agent_builder.compile()
 
 # print(agent.get_graph(xray=True).draw_mermaid())
-
-q=input("Ask agent: ")
-messages = [HumanMessage(content=q)]
-messages = agent.invoke({"messages": messages})
-for m in messages["messages"]:
-    m.pretty_print()
-print("================================== END ==================================")
-print(f"Total tokens used: {messages['total_tokens']}")
-print(f"Total LLM calls: {messages['llm_calls']}")

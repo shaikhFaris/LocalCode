@@ -7,7 +7,12 @@ from dotenv import load_dotenv
 from agent_tools.apply_patch import apply_patch
 load_dotenv()
 
-def list_files_recursive(startpath:str, ignore_dirs:set[str]=None, prefix="", _lines=None, _is_root=True):
+DEFAULT_IGNORE_DIRS = {
+    "node_modules", ".git", "__pycache__", ".venv", "venv",
+    "dist", "build", ".next", "target", ".pytest_cache", "*.egg-info",
+}
+
+def list_files_recursive(startpath:str, ignore_dirs:set[str]=DEFAULT_IGNORE_DIRS, prefix="", _lines=None, _is_root=True):
 
     if ignore_dirs is None:
         ignore_dirs = {'node_modules', 'venv', '.venv', '__pycache__',
@@ -39,7 +44,7 @@ def list_files_recursive(startpath:str, ignore_dirs:set[str]=None, prefix="", _l
         return "\n".join(_lines)
 
 @tool
-def list_files(startpath:str, ignore_dirs:set[str]=None)->str:
+def list_files(startpath:str, ignore_dirs:set[str]=DEFAULT_IGNORE_DIRS)->str:
     """
     Build a tree-style directory listing, similar to the Linux `tree` command.
 
@@ -236,12 +241,24 @@ def delete_file(path_and_filename: str)->str:
     else:
         return "The file does not exist"
 
+@tool
+def get_working_directory():
+    """
+    Get the current working directory of the agent.
+
+    Returns:
+        str: The absolute path of the current working directory.
+    """
+    import os
+
+    return os.getcwd()
+
 model = init_chat_model(
     "deepseek-v4-flash",
     model_provider="deepseek"   
 )
 
-tools=[list_files,read_file,search_code,git_diff,git_status,create_file,apply_patch,delete_file]
+tools=[list_files,read_file,search_code,git_diff,git_status,create_file,apply_patch,delete_file,get_working_directory]
 tools_by_name = {tool.name: tool for tool in tools}
 
 model_with_tools=model.bind_tools(tools)
