@@ -5,8 +5,11 @@ import operator
 from langchain.messages import SystemMessage,HumanMessage,ToolMessage
 from typing import Literal
 from langgraph.graph import StateGraph, START, END
-from tools import tools_by_name,model_with_tools
+from agent_tools.tools import tools_by_name,model_with_tools
 from prompts.coding_agent import CODING_AGENT_SYSTEM_PROMPT
+
+MAX_CHARS=16000
+
 
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
@@ -32,6 +35,9 @@ def tool_node(state: MessagesState):
     for tool_call in state["messages"][-1].tool_calls:
         tool = tools_by_name[tool_call["name"]]
         observation = tool.invoke(tool_call["args"])
+        # preventing context window overload from very large tool responses
+        if len(observation) > MAX_CHARS:
+            observation = observation[:MAX_CHARS] + "\n\n... [TRUNCATED]"
         result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
     return {"messages": result}
 
@@ -68,12 +74,3 @@ agent_builder.add_edge("tool_node", "llm_call")
 agent = agent_builder.compile()
 
 # print(agent.get_graph(xray=True).draw_mermaid())
-
-q=input("Ask agent: ")
-messages = [HumanMessage(content=q)]
-messages = agent.invoke({"messages": messages})
-for m in messages["messages"]:
-    m.pretty_print()
-print("================================== END ==================================")
-print(f"Total tokens used: {messages['total_tokens']}")
-print(f"Total LLM calls: {messages['llm_calls']}")

@@ -51,9 +51,9 @@ LangGraph primitives, in order:
 
 - [ ] Shared LangGraph `AgentState` object (task, files, plan, changes, test/lint/type results, status, etc.)
 - [ ] Isolated per-task workspace (`/workspaces/task-123/{repository,logs,artifacts,state}`)
-- [ ] Repo exploration tools: `list_files`, `read_file`, `search_code`, `get_git_diff`
+- [x] Repo exploration tools: `list_files`, `read_file`, `search_code`, `get_git_diff`
 - [ ] Planning step → structured JSON plan (objective + steps + affected files), stored in state
-- [ ] Code modification tools: `create_file`, `edit_file`, `delete_file` (patch-based preferred over full rewrites)
+- [x] Code modification tools: `create_file`, `edit_file`, `delete_file` (patch-based preferred over full rewrites)
 - [ ] Every change logged as a `FileChange` (file, operation, reason)
 - [ ] Test execution — auto-detect commands from `package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod`, run test/lint/typecheck
 - [ ] Test → fail → analyze → fix → retest loop, capped at `MAX_ITERATIONS` (e.g. 5)
