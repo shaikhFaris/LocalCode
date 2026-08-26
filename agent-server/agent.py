@@ -8,6 +8,9 @@ from langgraph.graph import StateGraph, START, END
 from agent_tools.tools import tools_by_name,model_with_tools
 from prompts.coding_agent import CODING_AGENT_SYSTEM_PROMPT
 
+MAX_CHARS=16000
+
+
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
     llm_calls: int
@@ -32,6 +35,9 @@ def tool_node(state: MessagesState):
     for tool_call in state["messages"][-1].tool_calls:
         tool = tools_by_name[tool_call["name"]]
         observation = tool.invoke(tool_call["args"])
+        # preventing context window overload from very large tool responses
+        if len(observation) > MAX_CHARS:
+            observation = observation[:MAX_CHARS] + "\n\n... [TRUNCATED]"
         result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
     return {"messages": result}
 
