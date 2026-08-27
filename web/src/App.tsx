@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router";
-import Workspace from "./pages/workspace";
+import Workspace from "./pages/Workspace";
 import Navbar from "./components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 
