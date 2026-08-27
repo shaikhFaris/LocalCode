@@ -18,6 +18,7 @@ def create_container(repo_path:str,api_key:str):
             detach=True,
         )
         container.start()
+        print("container created")
         print(container.status)
     except Exception as e:
         raise AppError(

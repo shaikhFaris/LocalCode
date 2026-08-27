@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Message, MessageAvatar, MessageContent } from "@/components/ui/message";
 import { Button } from "@/components/ui/button";
+import { useSandbox } from "@/hooks/useSandBox";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -21,6 +22,7 @@ const Workspace = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const submitFormRef = useRef<HTMLFormElement>(null);
+  const { setSandboxConnected } = useSandbox();
 
   const submitMessage = (event: React.SubmitEvent) => {
     event.preventDefault();
@@ -68,6 +70,7 @@ const Workspace = () => {
 
     socket.onopen = () => {
       console.log("WebSocket connected");
+      setSandboxConnected(true);
     };
 
     socket.onmessage = (event) => {
@@ -86,6 +89,7 @@ const Workspace = () => {
 
     socket.onerror = (error) => {
       console.error("WebSocket error:", error);
+      setSandboxConnected(false);
     };
 
     socket.onclose = (event) => {
@@ -94,14 +98,16 @@ const Workspace = () => {
       console.log("reason:", event.reason);
       console.log("clean:", event.wasClean);
 
+      setSandboxConnected(false);
       socketRef.current = null;
     };
 
     return () => {
       socket.close();
+      setSandboxConnected(false);
       socketRef.current = null;
     };
-  }, [workspaceId]);
+  }, [setSandboxConnected, workspaceId]);
 
   if (!workspaceId) {
     return <div>invalid params</div>;
