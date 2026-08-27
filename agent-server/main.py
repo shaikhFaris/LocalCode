@@ -4,7 +4,7 @@ import json
 from agent import agent
 from langchain.messages import HumanMessage
 from pydantic import BaseModel
-
+from fastapi.middleware.cors import CORSMiddleware
 
 class Payload(BaseModel):
     user_query: str
@@ -14,6 +14,14 @@ class Message(BaseModel):
     payload: Payload
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():

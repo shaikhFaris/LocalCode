@@ -22,6 +22,7 @@ def llm_call(state: MessagesState):
 
     response=model_with_tools.invoke([SystemMessage(content=CODING_AGENT_SYSTEM_PROMPT)]+ state["messages"])
     tokens_used = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+    print("Tokens used: ",tokens_used)
     return {
         "messages": [response],
         "llm_calls": state.get('llm_calls', 0) + 1,
