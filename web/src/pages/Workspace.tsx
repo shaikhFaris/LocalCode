@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { Message, MessageAvatar, MessageContent } from "@/components/ui/message";
+import { Message, MessageContent } from "@/components/ui/message";
 import { Button } from "@/components/ui/button";
 import { useSandbox } from "@/hooks/useSandBox";
+import { StreamingText } from "@/components/StreamingText";
+// import Markdown from "react-markdown";
+import { cn } from "@/lib/utils";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -75,6 +77,7 @@ const Workspace = () => {
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data) as AgentOutput;
+      console.log(message);
 
       if (message.type === "agent_output") {
         setMessages((current) => [
@@ -121,17 +124,25 @@ const Workspace = () => {
 
           return (
             <Message key={`${message.role}-${index}`} align={isUser ? "end" : "start"}>
-              <MessageAvatar>
+              {/* <MessageAvatar>
                 <Avatar>
                   <AvatarFallback>{isUser ? "You" : "AI"}</AvatarFallback>
                 </Avatar>
-              </MessageAvatar>
+              </MessageAvatar> */}
               <MessageContent>
                 <Bubble
                   align={isUser ? "end" : "start"}
                   variant={isUser ? "default" : "secondary"}
+                  className={cn(!isUser && "w-full max-w-full")}
                 >
-                  <BubbleContent>{message.content}</BubbleContent>
+                  {isUser ? (
+                    <BubbleContent className="text-base">{message.content}</BubbleContent>
+                  ) : (
+                    <div className="w-full p-4 markdown">
+                      <StreamingText text={message.content} />
+                      {/* <Markdown>{message.content}</Markdown> */}
+                    </div>
+                  )}
                 </Bubble>
               </MessageContent>
             </Message>

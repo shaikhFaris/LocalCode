@@ -37,6 +37,9 @@ def tool_node(state: MessagesState):
         tool = tools_by_name[tool_call["name"]]
         observation = tool.invoke(tool_call["args"])
         # preventing context window overload from very large tool responses
+        if not isinstance(observation, str):
+            observation = str(observation)
+
         if len(observation) > MAX_CHARS:
             observation = observation[:MAX_CHARS] + "\n\n... [TRUNCATED]"
         result.append(ToolMessage(content=observation, tool_call_id=tool_call["id"]))
