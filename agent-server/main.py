@@ -43,13 +43,19 @@ async def ws_endpoint(websocket: WebSocket, workspace_id: str):
                 case "user_chat":
                     message = Message.model_validate(message)
                     messages = [HumanMessage(content=message.payload.user_query)]
-                    messages = agent.invoke({"messages": messages})
-                    for m in messages["messages"]:
-                        m.pretty_print()
-                    print("================================== END ==================================")
-                    print(f"Total tokens used: {messages['total_tokens']}")
-                    print(f"Total LLM calls: {messages['llm_calls']}")
-                    await websocket.send_json({"type": "agent_output", "payload": messages["messages"][-1].content})
+                    start=True
+                    async for message_chunk, metadata in agent.astream({"messages": messages}, stream_mode="messages"):
+                        if not message_chunk.content:
+                            continue
+                        if metadata.get("langgraph_node") != "llm_call":
+                            print(message_chunk.content)
+                            continue
+                        await websocket.send_json({"type": "agent_output", "payload": {
+                            "start":start,
+                            "content":message_chunk.content
+                        }})
+                        start=False
+
                 case _:
                     print(f"Unknown message type: {message.get('type')}")
     except WebSocketDisconnect:

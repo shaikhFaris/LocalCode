@@ -36,5 +36,6 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
+WORKDIR /workspace
 
-CMD ["fastapi","run"]
+CMD ["fastapi","run","/app/main.py"]

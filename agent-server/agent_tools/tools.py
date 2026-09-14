@@ -4,7 +4,8 @@ import subprocess
 import os
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from agent_tools.apply_patch import apply_patch
+from agent_tools.apply_patch import apply_patch 
+from agent_tools.wrapper import _catch_tool_errors
 load_dotenv()
 
 DEFAULT_IGNORE_DIRS = {
@@ -44,6 +45,7 @@ def list_files_recursive(startpath:str, ignore_dirs:set[str]=DEFAULT_IGNORE_DIRS
         return "\n".join(_lines)
 
 @tool
+@_catch_tool_errors
 def list_files(startpath:str, ignore_dirs:set[str]=DEFAULT_IGNORE_DIRS)->str:
     """
     Build a tree-style directory listing, similar to the Linux `tree` command.
@@ -60,6 +62,7 @@ def list_files(startpath:str, ignore_dirs:set[str]=DEFAULT_IGNORE_DIRS)->str:
     return list_files_recursive(startpath,ignore_dirs)
 
 @tool
+@_catch_tool_errors
 def read_file(path_and_filename:str)->str:
     """
     Read and return the full contents of a text file. Do not read .env file.
@@ -80,6 +83,7 @@ def read_file(path_and_filename:str)->str:
         return f.read()
 
 @tool
+@_catch_tool_errors
 def search_code(query: str, path: str = None) -> str:
     """
     Search for a whole-word match of `query` within files under `path` using ripgrep.
@@ -120,6 +124,7 @@ def search_code(query: str, path: str = None) -> str:
     return result.stdout or "No matches found."
 
 @tool
+@_catch_tool_errors
 def git_diff(path_and_filename: str) -> str:
     """
     Get the git diff for a specific file, including untracked (new) files.
@@ -162,6 +167,7 @@ def git_diff(path_and_filename: str) -> str:
     return result.stdout or "No changes made."
 
 @tool
+@_catch_tool_errors
 def git_status()->str:
     """
     Get the current git status of the repository.
@@ -192,6 +198,7 @@ def git_status()->str:
     return result.stdout or "No changes made."
 
 @tool
+@_catch_tool_errors
 def create_file(path_and_filename: str, content: str):
     """
     Create a new file and write content to it.
@@ -218,6 +225,7 @@ def create_file(path_and_filename: str, content: str):
         f.write(content)
 
 @tool
+@_catch_tool_errors
 def delete_file(path_and_filename: str)->str:
     """
     Delete a file at the given path, if it exists.
@@ -242,6 +250,7 @@ def delete_file(path_and_filename: str)->str:
         return "The file does not exist"
 
 @tool
+@_catch_tool_errors
 def get_working_directory():
     """
     Get the current working directory of the agent.

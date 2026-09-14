@@ -15,7 +15,10 @@ type ChatMessage = {
 
 type AgentOutput = {
   type: "agent_output";
-  payload: string;
+  payload: {
+    start: boolean;
+    content: string;
+  };
 };
 
 const Workspace = () => {
@@ -77,16 +80,25 @@ const Workspace = () => {
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data) as AgentOutput;
-      console.log(message);
 
       if (message.type === "agent_output") {
-        setMessages((current) => [
-          ...current,
-          {
-            role: "assistant",
-            content: message.payload,
-          },
-        ]);
+        if (message.payload.start) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: message.payload.content,
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            {
+              ...prev[prev.length - 1],
+              content: prev[prev.length - 1].content + (message.payload.content ?? ""),
+            },
+          ]);
+        }
       }
     };
 
@@ -118,7 +130,7 @@ const Workspace = () => {
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col gap-6 p-6">
-      <section className="flex-1 space-y-4">
+      <section className="flex-1 space-y-4 pb-20">
         {messages.map((message, index) => {
           const isUser = message.role === "user";
 
@@ -132,7 +144,7 @@ const Workspace = () => {
               <MessageContent>
                 <Bubble
                   align={isUser ? "end" : "start"}
-                  variant={isUser ? "default" : "secondary"}
+                  variant={isUser ? "secondary" : "secondary"}
                   className={cn(!isUser && "w-full max-w-full")}
                 >
                   {isUser ? (
@@ -150,18 +162,24 @@ const Workspace = () => {
         })}
       </section>
 
-      <form className="flex h-10" ref={submitFormRef} onSubmit={submitMessage}>
-        <textarea
-          className="h-10 flex-1 resize-none rounded-lg border bg-secondary px-3 py-2 text-sm outline-none"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Ask about your workspace..."
-          rows={1}
-        />
-        <Button type="submit" disabled={!input.trim()} className={"h-full"}>
-          Send
-        </Button>
-      </form>
+      <div className="fixed bottom-8 w-full left-0">
+        <form
+          className="flex h-12 w-2/3 max-w-3xl mx-auto"
+          ref={submitFormRef}
+          onSubmit={submitMessage}
+        >
+          <textarea
+            className="h-12 flex-1 resize-none rounded-lg border bg-secondary px-3 py-2 outline-none"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Ask about your workspace..."
+            rows={1}
+          />
+          <Button type="submit" disabled={!input.trim()} className={"h-full"}>
+            Send
+          </Button>
+        </form>
+      </div>
     </main>
   );
 };
