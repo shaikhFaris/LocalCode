@@ -25,7 +25,7 @@ def read_root():
 def create_workspace(repo_path:str):
     # check if a workspace is running
 
-    # create a container
+    # create a container only if the repo is git initialised
     create_container(api_key=os.getenv("DEEPSEEK_API_KEY"),repo_path=repo_path)
 
     return {

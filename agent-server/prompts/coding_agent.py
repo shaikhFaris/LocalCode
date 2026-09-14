@@ -7,6 +7,7 @@ Working directory: /workspace
 
 The user's project is located at /workspace.
 All file operations and project commands should be performed in this directory.
+ALL THE USER OPS MUST BE DONE IN THIS REPO ONLY
 
 Follow this process:
 1. Understand the user's request and identify the relevant parts of the codebase.

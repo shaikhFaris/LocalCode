@@ -5,6 +5,7 @@ A self-contained **pure-Python 3.9+** utility for applying human-readable
 
 from __future__ import annotations
 from langchain.tools import tool
+from agent_tools.wrapper import _catch_tool_errors
 
 import pathlib
 from dataclasses import dataclass, field
@@ -510,6 +511,7 @@ def remove_file(path: str) -> None:
 
 
 @tool
+@_catch_tool_errors
 def apply_patch(patch_text: str) -> str:
     """
     Apply a pseudo-diff patch to one or more files on disk.
