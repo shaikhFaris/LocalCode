@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import AsyncSessionLocal
@@ -37,3 +38,10 @@ async def create_workspace(
     finally:
         if owns_session:
             await session.close()
+
+
+async def list_workspaces(session: AsyncSession) -> list[Workspace]:
+    result = await session.execute(
+        select(Workspace).order_by(Workspace.updated_at.desc())
+    )
+    return list(result.scalars().all())

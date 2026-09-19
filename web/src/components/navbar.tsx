@@ -1,12 +1,15 @@
 import { useSandbox } from "@/hooks/useSandBox";
 import { ModeToggle } from "./mode-toggle";
+import { SidebarTrigger } from "./ui/sidebar";
 
 export default function Navbar() {
   const { sandboxConnected } = useSandbox();
 
   return (
-    <div className="px-2 md:px-4 sticky top-0 w-full flex items-center justify-between py-2">
-      <h2 className="font-semibold">LocalCode</h2>
+    <div className="sticky top-0 z-10 flex w-full items-center justify-between bg-background/95 px-2 py-2 backdrop-blur md:px-4">
+      <div className="flex items-center gap-2">
+        <SidebarTrigger />
+      </div>
       <div className="flex items-center gap-4">
         <div
           className="flex items-center gap-1 text-xs text-muted-foreground"
