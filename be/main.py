@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from uuid import UUID
 from utils.error import AppError
 from fastapi.responses import JSONResponse
 from utils.containers import create_container
@@ -7,6 +8,8 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from database import AsyncSessionLocal
 from utils.db.workspace import create_workspace as create_workspace_record
+from utils.db.workspace import list_workspaces
+from utils.db.message import list_messages
 
 load_dotenv()
 app = FastAPI()
@@ -22,6 +25,45 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+
+@app.get("/workspaces")
+async def get_workspaces():
+    async with AsyncSessionLocal() as session:
+        workspaces = await list_workspaces(session)
+
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": str(workspace.id),
+                "created_at": workspace.created_at.isoformat(),
+                "updated_at": workspace.updated_at.isoformat(),
+            }
+            for workspace in workspaces
+        ],
+    }
+
+
+@app.get("/workspace/{workspace_id}/messages")
+async def get_workspace_messages(workspace_id: UUID):
+    async with AsyncSessionLocal() as session:
+        messages = await list_messages(workspace_id, session)
+
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": str(message.id),
+                "workspace_id": str(message.workspace_id),
+                "role": message.role.value,
+                "content": message.content,
+                "sequence": message.sequence,
+                "created_at": message.created_at.isoformat(),
+            }
+            for message in messages
+        ],
+    }
 
 @app.post("/workspace/create/import")
 async def create_workspace(repo_path: str):

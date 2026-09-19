@@ -7,6 +7,7 @@ import { useSandbox } from "@/hooks/useSandBox";
 import { StreamingText } from "@/components/StreamingText";
 // import Markdown from "react-markdown";
 import { cn } from "@/lib/utils";
+import type { Messages } from "@/types/messages";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -20,6 +21,7 @@ type AgentOutput = {
     content: string;
   };
 };
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const Workspace = () => {
   const { id: workspaceId } = useParams();
@@ -124,6 +126,31 @@ const Workspace = () => {
     };
   }, [setSandboxConnected, workspaceId]);
 
+  useEffect(() => {
+    const fetchMessages = async (): Promise<void> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/workspace/${workspaceId}/messages`);
+        const data = await (res.json() as Promise<{
+          data: Messages[];
+          success: boolean;
+        }>);
+        if (data.success && data.data.length > 0) {
+          const messages = data.data.map((el) => {
+            return {
+              content: el.content,
+              role: el.role,
+            } as ChatMessage;
+          });
+          setMessages(messages);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    if (!workspaceId) return;
+    fetchMessages();
+  }, [workspaceId]);
+
   if (!workspaceId) {
     return <div>invalid params</div>;
   }
@@ -162,9 +189,9 @@ const Workspace = () => {
         })}
       </section>
 
-      <div className="fixed bottom-8 w-full left-0">
+      <div className="sticky bottom-8 w-full left-0">
         <form
-          className="flex h-12 w-2/3 max-w-3xl mx-auto"
+          className="flex h-12 w-full max-w-3xl mx-auto"
           ref={submitFormRef}
           onSubmit={submitMessage}
         >
