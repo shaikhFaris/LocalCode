@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres
+    container_name: localcode-db
+    ports:
+      - "5431:5432"
+    environment:
+      - POSTGRES_PASSWORD=pass123
+    networks:
+      - localcode-network
+
+networks:
+  localcode-network:
+    driver: bridge
