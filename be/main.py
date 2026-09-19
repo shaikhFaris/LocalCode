@@ -5,6 +5,8 @@ from utils.containers import create_container
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from database import AsyncSessionLocal
+from utils.db.workspace import create_workspace as create_workspace_record
 
 load_dotenv()
 app = FastAPI()
@@ -22,16 +24,24 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/workspace/create/import")
-def create_workspace(repo_path:str):
+async def create_workspace(repo_path: str):
     # check if a workspace is running
 
-    # create a container only if the repo is git initialised
-    create_container(api_key=os.getenv("DEEPSEEK_API_KEY"),repo_path=repo_path)
+    # transaction
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            workspace = await create_workspace_record(session)
+            # create a container only if the repo is git initialised
+            create_container(
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                repo_path=repo_path,
+                workspace_id=str(workspace.id),
+            )
 
     return {
         "success":True,
         "data":{
-        "workspace_id":"dsaoida89d879asd"
+        "workspace_id":str(workspace.id)
     }}
 
 @app.exception_handler(AppError)

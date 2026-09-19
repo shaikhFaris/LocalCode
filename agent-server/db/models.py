@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from .database import Base
 
 
 class MessageRole(str, Enum):
