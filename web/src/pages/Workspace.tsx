@@ -26,6 +26,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const Workspace = () => {
   const { id: workspaceId } = useParams();
   const socketRef = useRef<WebSocket | null>(null);
+  const connectJitter = useRef<number>(500);
+  const isUnmounted = useRef<boolean>(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const submitFormRef = useRef<HTMLFormElement>(null);
@@ -70,57 +72,63 @@ const Workspace = () => {
   }, []);
 
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId || !connectJitter.current || isUnmounted.current) return;
+    isUnmounted.current = false;
+    const connect = () => {
+      const socket = new WebSocket(`ws://localhost:8001/workspace/${workspaceId}`);
+      socketRef.current = socket;
+      console.log("connecting");
 
-    const socket = new WebSocket(`ws://localhost:8001/workspace/${workspaceId}`);
-    socketRef.current = socket;
+      socket.onopen = () => {
+        console.log("WebSocket connected");
+        setSandboxConnected(true);
+      };
 
-    socket.onopen = () => {
-      console.log("WebSocket connected");
-      setSandboxConnected(true);
-    };
+      socket.onmessage = (event) => {
+        const message = JSON.parse(event.data) as AgentOutput;
 
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data) as AgentOutput;
-
-      if (message.type === "agent_output") {
-        if (message.payload.start) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: message.payload.content,
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev.slice(0, -1),
-            {
-              ...prev[prev.length - 1],
-              content: prev[prev.length - 1].content + (message.payload.content ?? ""),
-            },
-          ]);
+        if (message.type === "agent_output") {
+          if (message.payload.start) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: message.payload.content,
+              },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev.slice(0, -1),
+              {
+                ...prev[prev.length - 1],
+                content: prev[prev.length - 1].content + (message.payload.content ?? ""),
+              },
+            ]);
+          }
         }
-      }
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setSandboxConnected(false);
+      };
+
+      socket.onclose = (event) => {
+        console.log("WS closed. Attempting to connect in ", connectJitter.current);
+        setSandboxConnected(false);
+        socketRef.current = null;
+        setTimeout(function () {
+          if (!isUnmounted.current) {
+            connectJitter.current *= 2;
+            connect();
+          }
+        }, connectJitter.current);
+      };
     };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setSandboxConnected(false);
-    };
-
-    socket.onclose = (event) => {
-      console.log("WebSocket disconnected");
-      console.log("code:", event.code);
-      console.log("reason:", event.reason);
-      console.log("clean:", event.wasClean);
-
-      setSandboxConnected(false);
-      socketRef.current = null;
-    };
-
+    connect();
     return () => {
-      socket.close();
+      if (socketRef.current) socketRef.current.close();
+      isUnmounted.current = true;
       setSandboxConnected(false);
       socketRef.current = null;
     };

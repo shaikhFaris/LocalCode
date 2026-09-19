@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useLocation } from "react-router";
-import { FolderGit2, Loader2 } from "lucide-react";
+import { FolderGit2, Loader2, Plus } from "lucide-react";
 
 import {
   Sidebar,
@@ -19,6 +19,7 @@ type Workspace = {
   id: string;
   created_at: string;
   updated_at: string;
+  status: "running" | "stopped" | "deleted";
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -49,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [location.pathname]);
 
   return (
     <Sidebar {...props}>
@@ -59,10 +60,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <h2 className="font-semibold">LocalCode</h2>
           </div>
         </div>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={location.pathname === "/workspace/new"}
+              render={<Link to="/workspace/new" />}
+            >
+              <Plus />
+              <span>New workspace</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Created workspaces</SidebarGroupLabel>
+          <SidebarGroupLabel className="flex items-center gap-1.5">
+            <FolderGit2 />
+            <p>Created workspaces</p>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {loading && (
@@ -85,7 +100,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     render={<Link to={`/workspace/${workspace.id}`} />}
                     tooltip={workspace.id}
                   >
-                    <FolderGit2 />
+                    <span
+                      aria-label={`Container ${workspace.status}`}
+                      className={`size-2 rounded-full ${
+                        workspace.status === "running"
+                          ? "bg-emerald-500"
+                          : workspace.status === "stopped"
+                            ? "bg-amber-500"
+                            : "bg-muted-foreground/50"
+                      }`}
+                    />
                     <span>{`Workspace ${workspace.id.slice(0, 8)}`}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

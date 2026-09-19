@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SandboxProvider } from "@/context/sandbox-context";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/app-sidebar";
+import NewWorkspace from "./pages/NewWorkspace";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<MdDesign />} />
                 <Route path="/md-design" element={<MdDesign />} />
+                <Route path="/workspace/new" element={<NewWorkspace />} />
                 <Route path="/workspace/:id" element={<Workspace />} />
               </Routes>
             </SidebarInset>

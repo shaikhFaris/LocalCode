@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from uuid import UUID
 from utils.error import AppError
 from fastapi.responses import JSONResponse
-from utils.containers import create_container
+from utils.containers import create_container, get_container_status
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,6 +39,7 @@ async def get_workspaces():
                 "id": str(workspace.id),
                 "created_at": workspace.created_at.isoformat(),
                 "updated_at": workspace.updated_at.isoformat(),
+                "status": get_container_status(str(workspace.id)),
             }
             for workspace in workspaces
         ],
