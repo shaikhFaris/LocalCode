@@ -48,6 +48,21 @@ def create_container(repo_path: str, api_key: str, workspace_id: str):
             details="Error while creating agent container to run wworkspace"+str(e)
         )
 
+def start_container( workspace_id: str):
+    container_name="agent-server-container-"+workspace_id
+    try:
+        container=client.containers.get(container_name)
+        container.start()
+    except Exception as e:
+        print(e)
+        raise AppError(
+            status_code=500,
+            message="Could not start agent container",
+            details="Error while starting agent container to run wworkspace"+str(e)
+        )
+
+
+
 # def delete_container(workspace_id):
 #     try:
 #         container = client.containers.create(

@@ -2,13 +2,13 @@ from fastapi import FastAPI, Request
 from uuid import UUID
 from utils.error import AppError
 from fastapi.responses import JSONResponse
-from utils.containers import create_container, get_container_status
+from utils.containers import create_container, get_container_status,start_container
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from database import AsyncSessionLocal
 from utils.db.workspace import create_workspace as create_workspace_record
-from utils.db.workspace import list_workspaces
+from utils.db.workspace import list_workspaces,workspace_details
 from utils.db.message import list_messages
 
 load_dotenv()
@@ -43,6 +43,27 @@ async def get_workspaces():
             }
             for workspace in workspaces
         ],
+    }
+
+@app.get("/workspaces/{workspace_id}")
+async def get_workspace_details(workspace_id: UUID):
+    workspace=await workspace_details(id=workspace_id,session=None)
+
+    return {
+        "success": True,
+        "data": {
+                "id": str(workspace.id),
+                "created_at": workspace.created_at.isoformat(),
+                "updated_at": workspace.updated_at.isoformat(),
+                "status": get_container_status(str(workspace.id)),
+            }
+    }
+
+@app.post("/workspaces/{workspace_id}/start")
+async def get_workspace_details(workspace_id: str):
+    start_container(workspace_id=workspace_id)
+    return {
+        "success": True,
     }
 
 
