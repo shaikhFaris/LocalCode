@@ -45,3 +45,18 @@ async def list_workspaces(session: AsyncSession) -> list[Workspace]:
         select(Workspace).order_by(Workspace.updated_at.desc())
     )
     return list(result.scalars().all())
+
+
+
+async def workspace_details(session: AsyncSession,id:str) -> list[Workspace]:
+    owns_session = session is None
+
+    if owns_session:
+        session = AsyncSessionLocal()
+
+    result = await session.execute(
+        select(Workspace).where(Workspace.id == id)
+    )
+
+    return result.scalar_one_or_none()
+

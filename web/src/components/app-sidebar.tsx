@@ -14,13 +14,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-
-type Workspace = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  status: "running" | "stopped" | "deleted";
-};
+import type { Workspace } from "@/types/workspace";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -106,8 +100,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         workspace.status === "running"
                           ? "bg-emerald-500"
                           : workspace.status === "stopped"
-                            ? "bg-amber-500"
-                            : "bg-muted-foreground/50"
+                            ? "bg-muted-foreground"
+                            : "bg-red-500"
                       }`}
                     />
                     <span>{`Workspace ${workspace.id.slice(0, 8)}`}</span>

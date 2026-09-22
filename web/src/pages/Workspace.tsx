@@ -8,6 +8,8 @@ import { StreamingText } from "@/components/StreamingText";
 // import Markdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import type { Messages } from "@/types/messages";
+import type { Workspace } from "@/types/workspace";
+import { Spinner } from "@/components/ui/spinner";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -26,12 +28,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const Workspace = () => {
   const { id: workspaceId } = useParams();
   const socketRef = useRef<WebSocket | null>(null);
-  const connectJitter = useRef<number>(500);
-  const isUnmounted = useRef<boolean>(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const submitFormRef = useRef<HTMLFormElement>(null);
   const { setSandboxConnected } = useSandbox();
+  const [status, setStatus] = useState<Workspace["status"] | null>(null);
+  const [isContainerStarting, setIsContainerStarting] = useState(false);
 
   const submitMessage = (event: React.SubmitEvent) => {
     event.preventDefault();
@@ -72,19 +74,35 @@ const Workspace = () => {
   }, []);
 
   useEffect(() => {
-    if (!workspaceId || !connectJitter.current || isUnmounted.current) return;
-    isUnmounted.current = false;
+    if (!workspaceId) return;
+
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectDelay = 500;
+
     const connect = () => {
+      if (cancelled) return;
+
       const socket = new WebSocket(`ws://localhost:8001/workspace/${workspaceId}`);
+
       socketRef.current = socket;
-      console.log("connecting");
+
+      console.log("connecting to workspace:", workspaceId);
 
       socket.onopen = () => {
-        console.log("WebSocket connected");
+        if (cancelled) {
+          socket.close();
+          return;
+        }
+        reconnectDelay *= 2;
+
+        console.log("WebSocket connected:", workspaceId);
         setSandboxConnected(true);
       };
 
       socket.onmessage = (event) => {
+        if (cancelled) return;
+
         const message = JSON.parse(event.data) as AgentOutput;
 
         if (message.type === "agent_output") {
@@ -97,42 +115,64 @@ const Workspace = () => {
               },
             ]);
           } else {
-            setMessages((prev) => [
-              ...prev.slice(0, -1),
-              {
-                ...prev[prev.length - 1],
-                content: prev[prev.length - 1].content + (message.payload.content ?? ""),
-              },
-            ]);
+            setMessages((prev) => {
+              if (prev.length === 0) return prev;
+
+              const last = prev[prev.length - 1];
+
+              return [
+                ...prev.slice(0, -1),
+                {
+                  ...last,
+                  content: last.content + (message.payload.content ?? ""),
+                },
+              ];
+            });
           }
         }
       };
 
       socket.onerror = (error) => {
+        if (cancelled) return;
+
         console.error("WebSocket error:", error);
         setSandboxConnected(false);
       };
 
-      socket.onclose = (event) => {
-        console.log("WS closed. Attempting to connect in ", connectJitter.current);
+      socket.onclose = () => {
+        if (cancelled) return;
+
+        console.log(`WS closed for ${workspaceId}. Reconnecting in ${reconnectDelay}ms`);
+
         setSandboxConnected(false);
-        socketRef.current = null;
-        setTimeout(function () {
-          if (!isUnmounted.current) {
-            connectJitter.current *= 2;
-            connect();
-          }
-        }, connectJitter.current);
+
+        reconnectTimer = setTimeout(() => {
+          if (cancelled) return;
+
+          connect();
+        }, reconnectDelay);
       };
     };
+
     connect();
+
     return () => {
-      if (socketRef.current) socketRef.current.close();
-      isUnmounted.current = true;
+      console.log("Cleaning up workspace:", workspaceId);
+
+      cancelled = true;
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+
       setSandboxConnected(false);
-      socketRef.current = null;
     };
-  }, [setSandboxConnected, workspaceId]);
+  }, [workspaceId, setSandboxConnected]);
 
   useEffect(() => {
     const fetchMessages = async (): Promise<void> => {
@@ -155,8 +195,25 @@ const Workspace = () => {
         console.error(error);
       }
     };
+    const fetchWorkspace = async (): Promise<void> => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}`);
+        const data = await (res.json() as Promise<{
+          data: Workspace;
+          success: boolean;
+        }>);
+        if (data.success && data.data) {
+          console.log(data.data);
+
+          setStatus(data.data.status);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     if (!workspaceId) return;
-    fetchMessages();
+    Promise.allSettled([fetchMessages(), fetchWorkspace()]);
   }, [workspaceId]);
 
   if (!workspaceId) {
@@ -198,6 +255,46 @@ const Workspace = () => {
       </section>
 
       <div className="sticky bottom-8 w-full left-0">
+        {status === "deleted" && (
+          <div>
+            <p className="text-sm pl-1">
+              Container has been{" "}
+              <span className="uppercase text-red-500 font-semibold">{status}</span>
+            </p>
+          </div>
+        )}
+        {status === "stopped" && (
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-sm pl-1">
+              Container has been{" "}
+              <span className="uppercase text-amber-400 font-semibold">{status}</span>
+            </p>
+            <Button
+              size={"sm"}
+              onClick={async () => {
+                setIsContainerStarting(true);
+                try {
+                  const res = await fetch(
+                    `${API_BASE_URL}/workspaces/${workspaceId}/start`,
+                    {
+                      method: "POST",
+                    },
+                  );
+                  const data = await (res.json() as Promise<{
+                    success: boolean;
+                  }>);
+                  if (data.success) setStatus("running");
+                } catch (error) {
+                  console.log(error);
+                } finally {
+                  setIsContainerStarting(false);
+                }
+              }}
+            >
+              {isContainerStarting ? <Spinner /> : "Start Container"}
+            </Button>
+          </div>
+        )}
         <form
           className="flex h-12 w-full max-w-3xl mx-auto"
           ref={submitFormRef}
@@ -210,7 +307,11 @@ const Workspace = () => {
             placeholder="Ask about your workspace..."
             rows={1}
           />
-          <Button type="submit" disabled={!input.trim()} className={"h-full"}>
+          <Button
+            type="submit"
+            disabled={!input.trim() || status !== "running"}
+            className={"h-full"}
+          >
             Send
           </Button>
         </form>
